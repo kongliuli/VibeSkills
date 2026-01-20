@@ -1,0 +1,395 @@
+name: Add Avalonia Skills (create files & PR)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 需要写权限以便创建分支、push 并创建 PR
+
+jobs:
+  create-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41874990+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch
+        id: branch
+        run: |
+          BRANCH="add-avalonia-skills-automation-$(date +%s)"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH"
+
+      - name: Create skill directories and files
+        run: |
+          set -euo pipefail
+
+          BASE="Skills"
+          TARGET_ROOT="$BASE/C#/Avalonia"
+          mkdir -p "$TARGET_ROOT"
+
+          # Helper to write files with EOF to keep UTF-8 content as-is
+          write_file() {
+            local path="$1"
+            local contentVar="$2"
+            mkdir -p "$(dirname "$path")"
+            # Use printf to avoid extra newlines
+            printf "%s\n" "$contentVar" > "$path"
+          }
+
+          # ---------------------------
+          # 1) Avalonia-UI-Beautify
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-UI-Beautify"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-ui-beautify"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "提供 Avalonia 界面美化、主题与样式重构建议的技能。"
+tags:
+  - "avalonia"
+  - "ui"
+  - "theme"
+  - "styles"
+description: >
+  对 Avalonia 项目中的 ResourceDictionary、样式、控件模板进行静态检查与改进建议。
+  可生成主题化示例、统一样式片段、颜色方案建议与深色/浅色切换模板。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "解析 XAML 中的 ResourceDictionary 与 Styles"
+  - "检测重复样式、未使用资源和不一致的颜色/字体"
+  - "生成统一 Theme ResourceDictionary 示例与替换片段"
+outputs:
+  - "样式/主题改进报告"
+  - "ResourceDictionary 示例文件（XAML 片段）"
+limitations:
+  - "仅静态建议；部分样式效果需在运行时校验"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-ui-beautify
+
+用途：
+- 检查并改进 Avalonia 项目的样式与主题，生成统一 ResourceDictionary、颜色方案与 XAML 片段。
+
+使用：
+- 可将本 skill 与 UI 子集一起打包上传以获得更精细的样式建议。
+EOF
+
+          cat > "$SD/templates/ui-beautify-sample.txt" <<'EOF'
+示例：Theme ResourceDictionary 片段
+- 定义基础颜色 (Primary, Accent, Background)
+- 提供控件样式（Button、TextBox、TextBlock）
+- 支持 Light/Dark 切换与变量说明
+EOF
+
+          # ---------------------------
+          # 2) Avalonia-AV-Integration
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-AV-Integration"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-av-integration"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "Avalonia 音视频集成建议：播放、解码、转码与 UI 控件集成。"
+tags:
+  - "avalonia"
+  - "audio"
+  - "video"
+  - "media"
+description: >
+  对 Avalonia 应用中的音视频功能给出实现建议、第三方库选择、跨平台兼容性以及 UI 控件（播放条、进度、封面）集成示例。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "识别音视频播放相关代码或依赖"
+  - "给出 LibVLC、FFmpeg、MediaElement 等库的集成建议与示例"
+  - "生成播放控件 XAML 片段与后台处理建议（线程、缓冲）"
+outputs:
+  - "集成方案文档"
+  - "XAML 播放控件示例与 ViewModel 处理片段"
+limitations:
+  - "不包含二进制媒体库打包，提供集成与打包建议"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-av-integration
+
+用途：
+- 提供 Avalonia 中音视频播放、流媒体处理、FFmpeg/LibVLC 集成示例与注意事项（跨平台、性能、解码）。
+EOF
+
+          cat > "$SD/templates/av-integration-checklist.txt" <<'EOF'
+音视频集成要点：
+- 播放库选择：LibVLC (跨平台)、FFmpeg (转码)、Avalonia.Media或系统媒体API
+- UI 控件：播放/暂停、进度、音量、字幕与封面图
+- 线程：使用后台线程处理解码，UI 仅负责渲染与控制
+- 打包：确保本地/目标平台包含必要 native libs（.dll/.so/.dylib）
+EOF
+
+          # ---------------------------
+          # 3) Avalonia-High-DPI
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-High-DPI"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-high-dpi"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "高 DPI 与缩放优化：解决不同屏幕缩放与像素密度问题。"
+tags:
+  - "avalonia"
+  - "dpi"
+  - "scaling"
+description: >
+  分析项目对高 DPI（Retina / HiDPI）与缩放支持的实现情况，提供 LayoutRounding、文本缩放、图像资源多分辨率处理与平台差异化建议。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "查找固定像素尺寸、未适配 DPI 的图片或硬编码字体大小"
+  - "提供替代方案（使用动态资源、矢量圖、不同分辨率圖像資源）"
+outputs:
+  - "高 DPI 問題清單與修復片段"
+limitations:
+  - "某些平台顯示細節需真實設備上驗證"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-high-dpi
+
+用途：
+- 幫助識別與修復高 DPI/縮放問題，提供 XAML/資源和打包建議以在 Windows/macOS/Linux 上獲得一致顯示。
+EOF
+
+          cat > "$SD/templates/high-dpi-tips.txt" <<'EOF'
+高 DPI 優化要點：
+- 使用 LayoutRounding、UseLayoutRounding=true
+- 使用矢量圖 (SVG) 或多分辨率位圖（@2x/@3x）
+- 避免硬編碼像素（prefer Grid, star sizing）
+- 字體：考慮 DPI 相關字體縮放而非固定大小
+EOF
+
+          # ---------------------------
+          # 4) Avalonia-Accessibility
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-Accessibility"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-accessibility"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "無障礙支持檢查與改進：鍵盤、焦點、屏幕閱讀器與對比度。"
+tags:
+  - "avalonia"
+  - "accessibility"
+  - "a11y"
+description: >
+  對 Avalonia 應用的無障礙支持進行靜態檢查並提供改進建議：鍵盤導航、焦點管理、AutomationProperties、可訪問文本與高對比度主題。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "檢查控件的 AutomationProperties、IsTabStop、名稱與焦點順序"
+  - "建議屏幕閱讀器友好文本與高對比度主題"
+outputs:
+  - "無障礙問題清單與修復建議（XAML 示例）"
+limitations:
+  - "屏幕閱讀器與可訪問性最佳實踐需在目標平台上實際測試"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-accessibility
+
+用途：
+- 對 Avalonia 界面進行無障礙審查並提供 Focus/AutomationProperties/XAML 調整示例，以改善可訪問性體驗。
+EOF
+
+          cat > "$SD/templates/accessibility-checklist.txt" <<'EOF'
+無障礙檢查項：
+- 每個交互控件應有 AutomationProperties.Name
+- 確保正確的 TabIndex/TabNavigation 與鍵盤可達性
+- 為圖像提供替代文本 (AutomationProperties.HelpText)
+- 提供高對比度主題與可放大文本支持
+EOF
+
+          # ---------------------------
+          # 5) Avalonia-Performance
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-Performance"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-performance"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "界面性能優化：減少 Measure/Arrange、虛擬化與資源復用建議。"
+tags:
+  - "avalonia"
+  - "performance"
+  - "optimization"
+description: >
+  針對 Avalonia 界面的渲染與佈局性能進行靜態分析���識別過深的視覺樹、不必要的綁定、未啟用虛擬化的列表等，並給出改進片段與優先級建議。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "掃描 XAML 中可能導致頻繁 Measure/Arrange 的控件結構"
+  - "識別未使用虛擬化的長列表與頻繁更新的綁定源"
+outputs:
+  - "性能問題清單與修復建議（XAML/C# 片段）"
+limitations:
+  - "運行時性能瓶頸需要配合實際 profiling 工具驗證"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-performance
+
+用途：
+- 提供靜態的佈局與渲染性能建議，幫助減少重繪、改進虛擬化和減少綁定開銷。
+EOF
+
+          cat > "$SD/templates/performance-checklist.txt" <<'EOF'
+性能優化要點：
+- 使用 ItemsRepeater / VirtualizingStackPanel 對大型數據源進行虛擬化
+- 減少複雜的 DataTemplate 層級與重複綁定
+- 使用緩存圖像、避免頻繁創建控件
+- 將 expensive 操作移到後台線程，UI 僅���渲染
+EOF
+
+          # ---------------------------
+          # 6) Avalonia-Packaging
+          # ---------------------------
+          SD="$TARGET_ROOT/Avalonia-Packaging"
+          mkdir -p "$SD/templates"
+          cat > "$SD/SKILL.md" <<'EOF'
+---
+name: "avalonia-packaging"
+version: "1.0.0"
+author: "kongliuli"
+language: "zh-CN"
+summary: "跨平台打包與發布建議：RID、native libs、簽名與安裝體驗。"
+tags:
+  - "avalonia"
+  - "packaging"
+  - "deployment"
+description: >
+  對 Avalonia 應用的跨平台打包與發布流程提供建議：runtime identifiers (RID)、native library 打包、Code Signing、installer 與自動更新策略。
+inputs:
+  - name: "project_archive"
+    type: "file"
+    accept: [".zip", ".skill"]
+    required: false
+behavior:
+  - "檢查 csproj / runtimeconfig 中的 RID 與依賴"
+  - "給出各平台打包示例（Windows EXE/MSI、macOS .app/.dmg、Linux AppImage）"
+outputs:
+  - "打包與發布清單與示例命令"
+limitations:
+  - "不執行實際打包操作，僅提供建議與示例腳本"
+---
+EOF
+
+          cat > "$SD/README.md" <<'EOF'
+# avalonia-packaging
+
+用途：
+- 幫助準備跨平台發布的 checklist 與示例（RID、簽名、native libs、installer 類型與 CI 示例）。
+EOF
+
+          cat > "$SD/templates/packaging-checklist.txt" <<'EOF'
+打包發布要點：
+- Windows: dotnet publish -r win-x64 / 使用 Squirrel/NSIS/Wix 打包 MSI/Installer
+- macOS: publish + create .app + 簽名與 notarize（注意 arm64/x64）
+- Linux: AppImage / Snap / DEB（注意依賴和 runtime）
+- 包含 native libs (.dll/.so/.dylib) 並測試在目標平台上運行
+EOF
+
+      - name: Commit changes if any
+        run: |
+          set -e
+          if git status --porcelain | grep .; then
+            git add --all
+            git commit -m "Add multiple Avalonia skills (text files)"
+            echo "Committed changes."
+          else
+            echo "No changes to commit."
+            exit 0
+          fi
+
+      - name: Push branch
+        id: push
+        run: |
+          set -e
+          BRANCH=$(jq -r '.branch' <<<"${{ steps.branch.outputs }}" 2>/dev/null || echo "${{ steps.branch.outputs.branch }}" )
+          # Fallback: if BRANCH not provided, compute similar name
+          if [ -z "$BRANCH" ] || [ "$BRANCH" = "null" ]; then
+            BRANCH="add-avalonia-skills-automation-$(date +%s)"
+          fi
+          git push origin "$BRANCH"
+          echo "pushed_branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        id: create_pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          owner_repo="${GITHUB_REPOSITORY}"
+          branch="$(jq -r '.pushed_branch' <<<"${{ steps.push.outputs }}" 2>/dev/null || echo "${{ steps.push.outputs.pushed_branch }}")"
+          if [ -z "$branch" ] || [ "$branch" = "null" ]; then
+            branch="add-avalonia-skills-automation-$(date +%s)"
+          fi
+          title="Add multiple Avalonia skills (text files)"
+          body="This PR was created by a workflow to add multiple Avalonia skill metadata and templates.\n\nPlease review and merge."
+          api_url="https://api.github.com/repos/${owner_repo}/pulls"
+
+          resp=$(curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$api_url" -d "$(jq -nc --arg b "$branch" --arg t "$title" --arg h "main" --arg body "$body" '{title:$t, head:$b, base:$h, body:$body}')" )
+          pr_url=$(echo "$resp" | jq -r .html_url)
+          if [ "$pr_url" = "null" ] || [ -z "$pr_url" ]; then
+            echo "Failed to create PR. Response:"
+            echo "$resp"
+            exit 1
+          fi
+          echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
+          echo "Pull Request created: $pr_url"
+
+      - name: Output PR link
+        run: |
+          echo "PR: ${{ steps.create_pr.outputs.pr_url }}"
